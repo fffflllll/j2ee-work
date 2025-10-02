@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="my_project.mapper.DishMapper">
+
+    <resultMap id="DishResultMap" type="my_project.entity.Dish">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="ingredients" column="ingredients"/>
+        <result property="photoUrl" column="photo_url"/>
+        <result property="price" column="price"/>
+        <result property="description" column="description"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="DishResultMap">
+        SELECT * FROM dish
+    </select>
+
+    <select id="findById" parameterType="long" resultMap="DishResultMap">
+        SELECT * FROM dish WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="my_project.entity.Dish">
+        INSERT INTO dish (name, ingredients, photo_url, price, description)
+        VALUES (#{name}, #{ingredients}, #{photoUrl}, #{price}, #{description})
+    </insert>
+
+    <update id="update" parameterType="my_project.entity.Dish">
+        UPDATE dish
+        SET name=#{name}, ingredients=#{ingredients}, photo_url=#{photoUrl}, price=#{price}, description=#{description}
+        WHERE id=#{id}
+    </update>
+
+    <delete id="delete" parameterType="long">
+        DELETE FROM dish WHERE id=#{id}
+    </delete>
+</mapper>

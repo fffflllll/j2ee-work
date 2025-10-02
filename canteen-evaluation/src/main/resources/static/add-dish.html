@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>添加菜品</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .container { margin-top: 40px; max-width: 600px; }
+        .card { box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-radius: 12px; }
+        .preview-img { width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; margin-bottom: 12px; }
+        .msg-success { color: #27ae60; }
+        .msg-error { color: #e74c3c; }
+    </style>
+</head>
+<body>
+<div id="app" class="container">
+    <div class="card p-4">
+        <h3 class="mb-4" style="color:#2980b9;">添加菜品</h3>
+        <form @submit.prevent="submitDish">
+            <div class="form-group">
+                <label>菜品名称</label>
+                <input v-model="form.name" class="form-control" maxlength="50" required>
+            </div>
+            <div class="form-group">
+                <label>原材料</label>
+                <input v-model="form.ingredients" class="form-control" maxlength="100">
+            </div>
+            <div class="form-group">
+                <label>价格</label>
+                <input v-model.number="form.price" type="number" class="form-control" min="0" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label>描述</label>
+                <textarea v-model="form.description" class="form-control" maxlength="200"></textarea>
+            </div>
+            <div class="form-group">
+                <label>菜品图片</label>
+                <input type="file" @change="onFileChange" accept="image/*" class="form-control-file">
+                <img v-if="form.photoUrl" :src="form.photoUrl" class="preview-img mt-2">
+            </div>
+            <button type="submit" class="btn btn-primary">提交</button>
+            <a href="/index.html" class="btn btn-link">返回列表</a>
+            <div v-if="msg" :class="msgClass" class="mt-2">{{ msg }}</div>
+        </form>
+    </div>
+</div>
+<script>
+function parseJwt(token){
+    try{const b=token.split('.')[1];const d=b.replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(escape(window.atob(d))));}catch(e){return null;}}
+axios.interceptors.request.use(cfg=>{const t=localStorage.getItem('token');if(t) cfg.headers.Authorization='Bearer '+t;return cfg;});
+new Vue({
+    el:'#app',
+    data:{
+        form:{ name:'', ingredients:'', price:'', description:'', photoUrl:'' },
+        msg:'',
+        msgClass:''
+    },
+    created(){
+        const token=localStorage.getItem('token');
+        const payload=parseJwt(token||'');
+        if(!token || !payload || payload.role!=='admin'){
+            localStorage.removeItem('token');
+            window.location.href='/admin-login.html';
+        }
+    },
+    methods:{
+        onFileChange(e){
+            const file=e.target.files[0]; if(!file) return;
+            const fd=new FormData(); fd.append('file',file);
+            axios.post('/api/upload',fd,{headers:{'Content-Type':'multipart/form-data'}})
+                .then(r=>{this.form.photoUrl=r.data;this.msg='图片上传成功';this.msgClass='msg-success';})
+                .catch(()=>{this.msg='图片上传失败';this.msgClass='msg-error';});
+        },
+        submitDish(){
+            if(!this.form.name || !this.form.price){this.msg='请填写完整信息';this.msgClass='msg-error';return;}
+            axios.post('/api/dishes',this.form).then(r=>{
+                if(r.data===true){
+                    this.msg='菜品添加成功！';this.msgClass='msg-success';
+                    setTimeout(()=>window.location.href='/index.html',1000);
+                }else{this.msg='无权限';this.msgClass='msg-error';}
+            }).catch(()=>{this.msg='添加失败，请重试';this.msgClass='msg-error';});
+        }
+    }
+});
+</script>
+</body>
+</html>
