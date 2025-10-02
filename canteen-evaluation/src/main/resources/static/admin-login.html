@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>管理员登录</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Roboto',Arial,sans-serif;background:linear-gradient(120deg,#667db6,#0082c8,#0082c8,#667db6);background-size:300% 300%;animation:bgMove 10s ease infinite}
+    @keyframes bgMove{0%,100%{background-position:0 50%}50%{background-position:100% 50%}}
+    .box{background:#fff;padding:42px 36px 34px;border-radius:22px;box-shadow:0 10px 40px rgba(0,0,0,.15);width:100%;max-width:370px;box-sizing:border-box;position:relative;overflow:hidden}
+    .box:before{content:"ADMIN";position:absolute;top:-20px;right:-10px;font-size:110px;font-weight:700;color:rgba(0,0,0,0.03);pointer-events:none}
+    h2{margin:0 0 14px;font-size:26px;text-align:center;letter-spacing:2px;color:#2d3436}
+    p.desc{text-align:center;margin:0 0 26px;font-size:14px;color:#777}
+    input{width:100%;padding:13px 15px;margin:0 0 18px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:15px;background:#f8fafc;transition:.25s}
+    input:focus{outline:none;border-color:#0082c8;box-shadow:0 0 0 3px #0082c830}
+    button{width:100%;padding:13px 15px;border:none;border-radius:8px;background:linear-gradient(90deg,#0082c8,#667db6);color:#fff;font-size:16px;font-weight:600;letter-spacing:1px;cursor:pointer;transition:.25s}
+    button:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,130,200,.35)}
+    .msg{margin-top:14px;font-size:14px;text-align:center}
+    .err{color:#e74c3c}.ok{color:#27ae60}
+    .switch{margin-top:18px;text-align:center;font-size:13px}
+    .switch a{color:#0082c8;text-decoration:none}
+    .switch a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>管理员登录</h2>
+    <p class="desc">仅限管理员账号进入管理后台</p>
+    <form id="adminLoginForm">
+      <input type="text" name="username" placeholder="管理员用户名" required autocomplete="username">
+      <input type="password" name="password" placeholder="密码" required autocomplete="current-password">
+      <button type="submit">登录后台</button>
+      <div id="msg" class="msg"></div>
+      <div class="switch">普通用户? <a href="/user-login.html">前往用户登录</a></div>
+    </form>
+  </div>
+  <script>
+    async function doLogin(form, expectRole){
+      const fd=new FormData(form);const p=new URLSearchParams();for(const [k,v] of fd.entries())p.append(k,v);
+      const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:p});
+      let data={};try{data=await res.json();}catch(e){}
+      const msgEl=document.getElementById('msg');
+      if(data.token && data.role){
+        if(data.role!==expectRole){
+          msgEl.textContent='角色不匹配：该账号不是'+(expectRole==='admin'?'管理员':'普通用户');msgEl.className='msg err';
+          return;
+        }
+        localStorage.setItem('token',data.token);
+        if(expectRole==='admin') window.location.href='/index.html'; else window.location.href='/index.html';
+      }else{msgEl.textContent='用户名或密码错误';msgEl.className='msg err';}
+    }
+    document.getElementById('adminLoginForm').addEventListener('submit',function(e){e.preventDefault();doLogin(this,'admin');});
+  </script>
+</body>
+</html>

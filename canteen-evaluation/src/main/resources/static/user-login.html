@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>用户登录 / 注册</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Roboto',Arial,sans-serif;background:linear-gradient(135deg,#f6d365 0%,#fda085 100%)}
+    .box{background:#fff;padding:40px 34px 30px;border-radius:22px;box-shadow:0 10px 40px rgba(0,0,0,.12);width:100%;max-width:380px;box-sizing:border-box;position:relative;overflow:hidden}
+    .tabs{display:flex;margin-bottom:26px;border-radius:12px;background:#f2f3f5;overflow:hidden}
+    .tab{flex:1;text-align:center;padding:10px 0;cursor:pointer;font-weight:600;font-size:15px;color:#777;transition:.25s}
+    .tab.active{background:linear-gradient(90deg,#f6d365,#fda085);color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+    h2{margin:0 0 14px;font-size:24px;text-align:center;letter-spacing:1px;color:#2d3436}
+    form{margin:0}
+    input{width:100%;padding:13px 15px;margin:0 0 16px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:15px;background:#f9fbfd;transition:.25s}
+    input:focus{outline:none;border-color:#f6a365;box-shadow:0 0 0 3px #f6a36533}
+    button.primary{width:100%;padding:13px 15px;border:none;border-radius:8px;background:linear-gradient(90deg,#f6d365,#fda085);color:#fff;font-size:16px;font-weight:600;letter-spacing:1px;cursor:pointer;transition:.25s;margin-top:4px}
+    button.primary:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(246,163,101,.45)}
+    .msg{margin-top:14px;font-size:14px;text-align:center;min-height:18px}
+    .err{color:#e74c3c}.ok{color:#27ae60}
+    .switch-admin{text-align:center;margin-top:18px;font-size:13px}
+    .switch-admin a{color:#e67e22;text-decoration:none}
+    .switch-admin a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="tabs">
+      <div id="tab-login" class="tab active" onclick="switchTab('login')">登录</div>
+      <div id="tab-register" class="tab" onclick="switchTab('register')">注册</div>
+    </div>
+    <div id="panel-login">
+      <h2>用户登录</h2>
+      <form id="userLoginForm">
+        <input type="text" name="username" placeholder="用户名" required autocomplete="username">
+        <input type="password" name="password" placeholder="密码" required autocomplete="current-password">
+        <button type="submit" class="primary">进入评价</button>
+      </form>
+    </div>
+    <div id="panel-register" style="display:none;">
+      <h2>用户注册</h2>
+      <form id="userRegisterForm">
+        <input type="text" name="username" placeholder="用户名 (4-20字符)" minlength="4" maxlength="20" required>
+        <input type="password" name="password" placeholder="密码 (6-30字符)" minlength="6" maxlength="30" required>
+        <input type="password" name="confirm" placeholder="确认密码" minlength="6" maxlength="30" required>
+        <button type="submit" class="primary">注册并登录</button>
+      </form>
+    </div>
+    <div id="msg" class="msg"></div>
+    <div class="switch-admin">管理员? <a href="/admin-login.html">前往管理员登录</a></div>
+  </div>
+  <script>
+    function switchTab(which){
+      document.getElementById('tab-login').classList.toggle('active',which==='login');
+      document.getElementById('tab-register').classList.toggle('active',which==='register');
+      document.getElementById('panel-login').style.display=which==='login'?'block':'none';
+      document.getElementById('panel-register').style.display=which==='register'?'block':'none';
+      document.getElementById('msg').textContent='';
+    }
+    async function doLogin(form, expectRole){
+      const fd=new FormData(form);const p=new URLSearchParams();for(const [k,v] of fd.entries())p.append(k,v);
+      const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:p});
+      let data={}; try{ data=await res.json(); }catch(e){}
+      const msgEl=document.getElementById('msg');
+      if(data.success){
+        if(data.role!==expectRole){ msgEl.textContent='角色不匹配：该账号不是普通用户'; msgEl.className='msg err'; return; }
+        localStorage.setItem('token',data.token);
+        window.location.href='/index.html';
+      } else { msgEl.textContent=data.message||'登录失败'; msgEl.className='msg err'; }
+    }
+    async function doRegister(form){
+      const fd=new FormData(form);
+      const username=fd.get('username').trim();
+      const password=fd.get('password');
+      const confirm=fd.get('confirm');
+      const msgEl=document.getElementById('msg');
+      if(password!==confirm){ msgEl.textContent='两次密码不一致'; msgEl.className='msg err'; return; }
+      if(username.length<4){ msgEl.textContent='用户名过短'; msgEl.className='msg err'; return; }
+      const res=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+      let data={}; try{ data=await res.json(); }catch(e){}
+      if(data.success){
+        msgEl.textContent='注册成功，正在跳转...'; msgEl.className='msg ok';
+        if(data.token){ localStorage.setItem('token',data.token); }
+        // 如果是首个用户注册为 admin，跳后台，否则进入普通首页
+        setTimeout(()=>{ if(data.role==='admin'){ window.location.href='/add-dish.html'; } else { window.location.href='/index.html'; } },800);
+      } else { msgEl.textContent=data.message||'注册失败'; msgEl.className='msg err'; }
+    }
+    document.getElementById('userLoginForm').addEventListener('submit',function(e){ e.preventDefault(); doLogin(this,'user'); });
+    document.getElementById('userRegisterForm').addEventListener('submit',function(e){ e.preventDefault(); doRegister(this); });
+  </script>
+</body>
+</html>
